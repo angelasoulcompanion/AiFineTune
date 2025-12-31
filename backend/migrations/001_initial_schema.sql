@@ -31,9 +31,9 @@ CREATE TABLE IF NOT EXISTS finetune_users (
     last_login_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE INDEX idx_finetune_users_email ON finetune_users(email);
-CREATE INDEX idx_finetune_users_username ON finetune_users(username);
-CREATE INDEX idx_finetune_users_active ON finetune_users(is_active) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_finetune_users_email ON finetune_users(email);
+CREATE INDEX IF NOT EXISTS idx_finetune_users_username ON finetune_users(username);
+CREATE INDEX IF NOT EXISTS idx_finetune_users_active ON finetune_users(is_active) WHERE is_active = TRUE;
 
 -- ============================================================
 -- 2. DATASETS TABLE
@@ -86,10 +86,10 @@ CREATE TABLE IF NOT EXISTS finetune_datasets (
     UNIQUE(user_id, name)
 );
 
-CREATE INDEX idx_finetune_datasets_user ON finetune_datasets(user_id);
-CREATE INDEX idx_finetune_datasets_status ON finetune_datasets(status);
-CREATE INDEX idx_finetune_datasets_type ON finetune_datasets(dataset_type);
-CREATE INDEX idx_finetune_datasets_created ON finetune_datasets(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_finetune_datasets_user ON finetune_datasets(user_id);
+CREATE INDEX IF NOT EXISTS idx_finetune_datasets_status ON finetune_datasets(status);
+CREATE INDEX IF NOT EXISTS idx_finetune_datasets_type ON finetune_datasets(dataset_type);
+CREATE INDEX IF NOT EXISTS idx_finetune_datasets_created ON finetune_datasets(created_at DESC);
 
 -- ============================================================
 -- 3. MODELS TABLE
@@ -148,11 +148,11 @@ CREATE TABLE IF NOT EXISTS finetune_models (
     UNIQUE(user_id, name)
 );
 
-CREATE INDEX idx_finetune_models_user ON finetune_models(user_id);
-CREATE INDEX idx_finetune_models_type ON finetune_models(model_type);
-CREATE INDEX idx_finetune_models_base ON finetune_models(base_model_id);
-CREATE INDEX idx_finetune_models_status ON finetune_models(status);
-CREATE INDEX idx_finetune_models_hf ON finetune_models(hf_repo_id) WHERE hf_repo_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_finetune_models_user ON finetune_models(user_id);
+CREATE INDEX IF NOT EXISTS idx_finetune_models_type ON finetune_models(model_type);
+CREATE INDEX IF NOT EXISTS idx_finetune_models_base ON finetune_models(base_model_id);
+CREATE INDEX IF NOT EXISTS idx_finetune_models_status ON finetune_models(status);
+CREATE INDEX IF NOT EXISTS idx_finetune_models_hf ON finetune_models(hf_repo_id) WHERE hf_repo_id IS NOT NULL;
 
 -- ============================================================
 -- 4. TRAINING JOBS TABLE
@@ -257,19 +257,26 @@ CREATE TABLE IF NOT EXISTS finetune_training_jobs (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_training_jobs_user ON finetune_training_jobs(user_id);
-CREATE INDEX idx_training_jobs_status ON finetune_training_jobs(status);
-CREATE INDEX idx_training_jobs_dataset ON finetune_training_jobs(dataset_id);
-CREATE INDEX idx_training_jobs_base_model ON finetune_training_jobs(base_model_id);
-CREATE INDEX idx_training_jobs_created ON finetune_training_jobs(created_at DESC);
-CREATE INDEX idx_training_jobs_active ON finetune_training_jobs(status)
+CREATE INDEX IF NOT EXISTS idx_training_jobs_user ON finetune_training_jobs(user_id);
+CREATE INDEX IF NOT EXISTS idx_training_jobs_status ON finetune_training_jobs(status);
+CREATE INDEX IF NOT EXISTS idx_training_jobs_dataset ON finetune_training_jobs(dataset_id);
+CREATE INDEX IF NOT EXISTS idx_training_jobs_base_model ON finetune_training_jobs(base_model_id);
+CREATE INDEX IF NOT EXISTS idx_training_jobs_created ON finetune_training_jobs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_training_jobs_active ON finetune_training_jobs(status)
     WHERE status IN ('queued', 'preparing', 'training', 'evaluating', 'saving');
 
--- Add FK from models to training_jobs
-ALTER TABLE finetune_models
-    ADD CONSTRAINT fk_models_training_job
-    FOREIGN KEY (training_job_id)
-    REFERENCES finetune_training_jobs(job_id);
+-- Add FK from models to training_jobs (skip if exists)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_models_training_job'
+    ) THEN
+        ALTER TABLE finetune_models
+            ADD CONSTRAINT fk_models_training_job
+            FOREIGN KEY (training_job_id)
+            REFERENCES finetune_training_jobs(job_id);
+    END IF;
+END $$;
 
 -- ============================================================
 -- 5. TRAINING TEMPLATES TABLE
@@ -302,9 +309,9 @@ CREATE TABLE IF NOT EXISTS finetune_training_templates (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_training_templates_user ON finetune_training_templates(user_id);
-CREATE INDEX idx_training_templates_method ON finetune_training_templates(training_method);
-CREATE INDEX idx_training_templates_system ON finetune_training_templates(is_system) WHERE is_system = TRUE;
+CREATE INDEX IF NOT EXISTS idx_training_templates_user ON finetune_training_templates(user_id);
+CREATE INDEX IF NOT EXISTS idx_training_templates_method ON finetune_training_templates(training_method);
+CREATE INDEX IF NOT EXISTS idx_training_templates_system ON finetune_training_templates(is_system) WHERE is_system = TRUE;
 
 -- ============================================================
 -- 6. TRIGGERS FOR updated_at
@@ -317,29 +324,39 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS update_finetune_users_updated_at ON finetune_users;
 CREATE TRIGGER update_finetune_users_updated_at
     BEFORE UPDATE ON finetune_users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_finetune_datasets_updated_at ON finetune_datasets;
 CREATE TRIGGER update_finetune_datasets_updated_at
     BEFORE UPDATE ON finetune_datasets
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_finetune_models_updated_at ON finetune_models;
 CREATE TRIGGER update_finetune_models_updated_at
     BEFORE UPDATE ON finetune_models
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_finetune_training_jobs_updated_at ON finetune_training_jobs;
 CREATE TRIGGER update_finetune_training_jobs_updated_at
     BEFORE UPDATE ON finetune_training_jobs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_finetune_training_templates_updated_at ON finetune_training_templates;
 CREATE TRIGGER update_finetune_training_templates_updated_at
     BEFORE UPDATE ON finetune_training_templates
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================
--- 7. SEED SYSTEM TEMPLATES
+-- 7. SEED SYSTEM TEMPLATES (skip if exists)
 -- ============================================================
+DO $$
+BEGIN
+    -- Only insert if no system templates exist
+    IF NOT EXISTS (SELECT 1 FROM finetune_training_templates WHERE is_system = TRUE LIMIT 1) THEN
+
 INSERT INTO finetune_training_templates (name, description, training_method, config, recommended_for, base_model_recommendations, is_system, is_public) VALUES
 
 -- QLoRA Template (Most Common)
@@ -469,6 +486,9 @@ INSERT INTO finetune_training_templates (name, description, training_method, con
  ARRAY['conversational', 'instruction', 'general'],
  ARRAY['Qwen2.5', 'Llama3.2', 'Mistral', 'Phi'],
  TRUE, TRUE);
+
+    END IF;
+END $$;
 
 -- ============================================================
 -- DONE
