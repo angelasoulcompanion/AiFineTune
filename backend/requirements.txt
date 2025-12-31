@@ -1,0 +1,56 @@
+# AiFineTune Platform - Backend Dependencies
+
+# FastAPI & Server
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+websockets>=12.0
+
+# Database
+asyncpg>=0.29.0
+
+# Authentication
+bcrypt>=4.1.0
+PyJWT>=2.8.0
+cryptography>=42.0.0
+
+# Rate Limiting
+slowapi>=0.1.9
+
+# Validation & Settings
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+email-validator>=2.1.0
+
+# ML & Training
+torch>=2.1.0
+transformers>=4.36.0
+datasets>=2.16.0
+accelerate>=0.25.0
+peft>=0.7.0
+trl>=0.7.0
+bitsandbytes>=0.42.0
+sentencepiece>=0.1.99
+
+# HuggingFace
+huggingface-hub>=0.20.0
+
+# Utilities
+aiofiles>=23.2.0
+python-dotenv>=1.0.0
+httpx>=0.26.0
+psutil>=5.9.0  # System/memory monitoring
+
+# Data handling
+pandas>=2.1.0
+pyarrow>=14.0.0
+
+# Cloud Training
+modal>=0.64.0  # Modal.com serverless GPU
+
+# Optional: Unsloth for faster training
+# unsloth @ git+https://github.com/unslothai/unsloth.git
+
+# Development
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
