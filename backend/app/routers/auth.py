@@ -185,7 +185,7 @@ async def save_hf_token(
     result = await auth_service.save_hf_token(
         current_user.user_id,
         request.hf_token,
-        validate=request.validate,
+        validate=request.validate_token,
     )
 
     if not result["success"]:

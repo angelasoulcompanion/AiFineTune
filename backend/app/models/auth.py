@@ -42,7 +42,7 @@ class PasswordChangeRequest(BaseModel):
 class HFTokenRequest(BaseModel):
     """HuggingFace token save request"""
     hf_token: str = Field(..., min_length=10)
-    validate: bool = True  # Whether to validate with HuggingFace API
+    validate_token: bool = True  # Whether to validate with HuggingFace API
 
 
 class HFTokenResponse(BaseModel):
